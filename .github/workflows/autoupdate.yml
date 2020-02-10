@@ -1,0 +1,25 @@
+name: AutoUpdate
+
+on:
+  schedule:
+    - cron:  '0 */1 * * *'
+
+jobs:
+  one:
+    name: AutoUpdate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: AutoUpdate
+        run: |
+          git config user.name "T-vK"
+          git config user.email "t-vk@users.noreply.github.com"
+          git remote set-url --push origin "https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}"
+          export LATEST_UPSTREAM_GIT_VERSION=$(curl -s https://raw.githubusercontent.com/dustinkirkland/hollywood/master/debian/changelog | sed '/^hollywood \(.*\) unreleased;/d' | sed -e/^hollywood/\{ -e:1 -en\;b1 -e\} -ed | head -n 1 | cut -d '(' -f2 | cut -d '-' -f1)
+          export LATEST_DOCKER_HUB_VERSION=$(curl -s -S "https://registry.hub.docker.com/v2/repositories/alwaysup2date/hollywood/tags/" | jq -r '."results"[]["name"]' | sed -n 1p)
+          echo "LATEST_DOCKER_HUB_VERSION: $LATEST_DOCKER_HUB_VERSION"
+          echo "LATEST_UPSTREAM_GIT_VERSION: $LATEST_UPSTREAM_GIT_VERSION"
+          if [ "$LATEST_DOCKER_HUB_VERSION" != "$LATEST_UPSTREAM_GIT_VERSION" ] ; then
+              git tag "$LATEST_UPSTREAM_GIT_VERSION"
+              git push --tags
+          fi
